@@ -4,30 +4,34 @@ export const getMousePos = (canvas, e) => {
   const scaleY = canvas.height / rect.height;
   
   const pos = {
-    x: ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX,
-    y: ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
   };
+  
+  if (e.touches && e.touches[0]) {
+    pos.x = (e.touches[0].clientX - rect.left) * scaleX;
+    pos.y = (e.touches[0].clientY - rect.top) * scaleY;
+  }
   
   return pos;
 };
 
 export const drawPath = (ctx, path) => {
-  if (!path || path.length < 2) return;
+  if (path.length < 2) return;
   
   ctx.beginPath();
   ctx.moveTo(path[0].x, path[0].y);
   
   path.forEach((point, i) => {
     if (i === 0) return;
-    ctx.lineWidth = point.width || 2;
+    ctx.lineWidth = point.width;
     ctx.lineTo(point.x, point.y);
   });
   
   if (path[0].fill) {
-    ctx.fillStyle = path[0].color || '#000';
+    ctx.fillStyle = path[0].color || 'black';
     ctx.fill();
   }
-  
   ctx.stroke();
 };
 
@@ -36,11 +40,10 @@ export const drawSelectionBox = (ctx, path) => {
   const padding = 10;
   
   ctx.save();
-  ctx.strokeStyle = '#0066ff';
+  ctx.strokeStyle = '#2196F3';
   ctx.lineWidth = 1;
   ctx.setLineDash([5, 5]);
   
-  // Draw selection rectangle
   ctx.strokeRect(
     bounds.minX - padding,
     bounds.minY - padding,
@@ -50,9 +53,6 @@ export const drawSelectionBox = (ctx, path) => {
   
   // Draw resize handles
   ctx.setLineDash([]);
-  ctx.fillStyle = '#fff';
-  ctx.strokeStyle = '#0066ff';
-  
   const handleSize = 8;
   const handles = [
     { x: bounds.minX, y: bounds.minY },
@@ -66,89 +66,139 @@ export const drawSelectionBox = (ctx, path) => {
   ];
   
   handles.forEach(handle => {
-    ctx.beginPath();
-    ctx.rect(
+    ctx.fillStyle = 'white';
+    ctx.fillRect(
       handle.x - handleSize / 2,
       handle.y - handleSize / 2,
       handleSize,
       handleSize
     );
-    ctx.fill();
-    ctx.stroke();
+    ctx.strokeRect(
+      handle.x - handleSize / 2,
+      handle.y - handleSize / 2,
+      handleSize,
+      handleSize
+    );
   });
   
   ctx.restore();
 };
 
 export const drawPreview = (ctx, path) => {
-  if (!path || path.length < 2) return;
-  
   const bounds = getPathBounds(path);
-  const width = Math.round(bounds.maxX - bounds.minX);
-  const height = Math.round(bounds.maxY - bounds.minY);
+  const width = bounds.maxX - bounds.minX;
+  const height = bounds.maxY - bounds.minY;
   
   ctx.save();
   ctx.font = '12px Arial';
   ctx.fillStyle = '#666';
   ctx.fillText(
-    `${width}px × ${height}px`,
+    `${Math.round(width)}px × ${Math.round(height)}px`,
     bounds.maxX + 10,
     bounds.maxY
   );
   ctx.restore();
 };
 
-export const getPathBounds = (path) => {
-  if (!path || path.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+export const createShape = (start, end, shape, strokeWidth, fill, color, borderRadius = 0) => {
+  const width = Math.abs(end.x - start.x);
+  const height = Math.abs(end.y - start.y);
+  const centerX = (start.x + end.x) / 2;
+  const centerY = (start.y + end.y) / 2;
   
-  const bounds = path.reduce((acc, point) => ({
-    minX: Math.min(acc.minX, point.x),
-    minY: Math.min(acc.minY, point.y),
-    maxX: Math.max(acc.maxX, point.x),
-    maxY: Math.max(acc.maxY, point.y)
-  }), {
-    minX: path[0].x,
-    minY: path[0].y,
-    maxX: path[0].x,
-    maxY: path[0].y
+  const points = [];
+  const commonProps = { width: strokeWidth, fill, color, borderRadius };
+  
+  switch (shape.id) {
+    case 'circle': {
+      const radius = Math.min(width, height) / 2;
+      for (let i = 0; i <= 360; i += 5) {
+        const angle = (i * Math.PI) / 180;
+        points.push({
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle),
+          ...commonProps
+        });
+      }
+      break;
+    }
+    case 'square': {
+      const size = Math.min(width, height);
+      points.push(
+        { x: start.x, y: start.y, ...commonProps },
+        { x: start.x + size, y: start.y, ...commonProps },
+        { x: start.x + size, y: start.y + size, ...commonProps },
+        { x: start.x, y: start.y + size, ...commonProps },
+        { x: start.x, y: start.y, ...commonProps }
+      );
+      break;
+    }
+    case 'line': {
+      points.push(
+        { x: start.x, y: start.y, ...commonProps },
+        { x: end.x, y: end.y, ...commonProps }
+      );
+      break;
+    }
+    case 'triangle': {
+      points.push(
+        { x: centerX, y: start.y, ...commonProps },
+        { x: start.x + width, y: start.y + height, ...commonProps },
+        { x: start.x, y: start.y + height, ...commonProps },
+        { x: centerX, y: start.y, ...commonProps }
+      );
+      break;
+    }
+  }
+  return points;
+};
+
+export const downloadFile = (content, fileName, contentType) => {
+  const blob = new Blob([content], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+export const isPointInPath = (canvas, path, point) => {
+  const ctx = canvas.getContext('2d');
+  ctx.beginPath();
+  ctx.moveTo(path[0].x, path[0].y);
+  path.forEach((p, i) => {
+    if (i > 0) ctx.lineTo(p.x, p.y);
+  });
+  return ctx.isPointInPath(point.x, point.y);
+};
+
+export const getPathBounds = (path) => {
+  const bounds = {
+    minX: Infinity,
+    minY: Infinity,
+    maxX: -Infinity,
+    maxY: -Infinity
+  };
+  
+  path.forEach(point => {
+    bounds.minX = Math.min(bounds.minX, point.x);
+    bounds.minY = Math.min(bounds.minY, point.y);
+    bounds.maxX = Math.max(bounds.maxX, point.x);
+    bounds.maxY = Math.max(bounds.maxY, point.y);
   });
   
   return bounds;
 };
 
-export const isPointInPath = (canvas, path, point) => {
-  const ctx = canvas.getContext('2d');
-  const bounds = getPathBounds(path);const padding = 5;
-  
-  // Check if point is within path bounds
-  if (
-    point.x < bounds.minX - padding ||
-    point.x > bounds.maxX + padding ||
-    point.y < bounds.minY - padding ||
-    point.y > bounds.maxY + padding
-  ) {
-    return false;
-  }
-  
-  // Check if point is on the path
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(path[0].x, path[0].y);
-  path.forEach((p, i) => {
-    if (i === 0) return;
-    ctx.lineTo(p.x, p.y);
-  });
-  
-  if (path[0].fill) {
-    const result = ctx.isPointInPath(point.x, point.y);
-    ctx.restore();
-    return result;
-  }
-  
-  ctx.lineWidth = Math.max(...path.map(p => p.width)) + padding * 2;
-  const result = ctx.isPointInStroke(point.x, point.y);
-  ctx.restore();
-  return result;
+export const getScaledPath = (path, scale, center) => {
+  return path.map(point => ({
+    ...point,
+    x: center.x + (point.x - center.x) * scale.x,
+    y: center.y + (point.y - center.y) * scale.y
+  }));
 };
 
 export const getTranslatedPath = (path, dx, dy) => {
@@ -159,104 +209,41 @@ export const getTranslatedPath = (path, dx, dy) => {
   }));
 };
 
-export const getScaledPath = (path, scale, origin) => {
-  return path.map(point => ({
-    ...point,
-    x: origin.x + (point.x - origin.x) * scale.x,
-    y: origin.y + (point.y - origin.y) * scale.y
-  }));
-};
-
-export const getRotatedPath = (path, angle, origin) => {
+export const getRotatedPath = (path, angle, center) => {
   return path.map(point => {
-    const dx = point.x - origin.x;
-    const dy = point.y - origin.y;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    
+    const x = point.x - center.x;
+    const y = point.y - center.y;
     return {
       ...point,
-      x: origin.x + dx * cos - dy * sin,
-      y: origin.y + dx * sin + dy * cos
+      x: center.x + x * Math.cos(angle) - y * Math.sin(angle),
+      y: center.y + x * Math.sin(angle) + y * Math.cos(angle)
     };
   });
 };
 
-export const getFlippedPath = (path, axis, origin) => {
+export const getFlippedPath = (path, direction, center) => {
   return path.map(point => ({
     ...point,
-    x: axis === 'vertical' ? point.x : origin.x * 2 - point.x,
-    y: axis === 'horizontal' ? point.y : origin.y * 2 - point.y
+    x: direction === 'horizontal' ? center.x * 2 - point.x : point.x,
+    y: direction === 'vertical' ? center.y * 2 - point.y : point.y
   }));
 };
 
-export const createShape = (start, end, shape, strokeWidth, fillEnabled, color) => {
-  const width = Math.abs(end.x - start.x);
-  const height = Math.abs(end.y - start.y);
-  const minX = Math.min(start.x, end.x);
-  const minY = Math.min(start.y, end.y);
-  const centerX = minX + width / 2;
-  const centerY = minY + height / 2;
+export const findNearestPoint = (paths, pos, threshold = 10) => {
+  let nearest = null;
+  let minDistance = threshold;
 
-  const points = [];
-  switch (shape.id) {
-    case 'circle': {
-      const radius = Math.min(width, height) / 2;
-      for (let i = 0; i <= 360; i += 5) {
-        const angle = (i * Math.PI) / 180;
-        points.push({
-          x: centerX + radius * Math.cos(angle),
-          y: centerY + radius * Math.sin(angle),
-          width: strokeWidth,
-          fill: fillEnabled,
-          color
-        });
+  paths.forEach(path => {
+    path.forEach(point => {
+      const distance = Math.sqrt(
+        Math.pow(point.x - pos.x, 2) + Math.pow(point.y - pos.y, 2)
+      );
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = point;
       }
-      break;
-    }
-    case 'square': {
-      const size = Math.min(width, height);
-      points.push(
-        { x: minX, y: minY, width: strokeWidth, fill: fillEnabled, color },
-        { x: minX + size, y: minY, width: strokeWidth, fill: fillEnabled, color },
-        { x: minX + size, y: minY + size, width: strokeWidth, fill: fillEnabled, color },
-        { x: minX, y: minY + size, width: strokeWidth, fill: fillEnabled, color },
-        { x: minX, y: minY, width: strokeWidth, fill: fillEnabled, color }
-      );
-      break;
-    }
-    case 'line': {
-      points.push(
-        { x: start.x, y: start.y, width: strokeWidth, color },
-        { x: end.x, y: end.y, width: strokeWidth, color }
-      );
-      break;
-    }
-    case 'triangle': {
-      points.push(
-        { x: centerX, y: minY, width: strokeWidth, fill: fillEnabled, color },
-        { x: minX + width, y: minY + height, width: strokeWidth, fill: fillEnabled, color },
-        { x: minX, y: minY + height, width: strokeWidth, fill: fillEnabled, color },
-        { x: centerX, y: minY, width: strokeWidth, fill: fillEnabled, color }
-      );
-      break;
-    }
-    default: {
-      console.warn(`Unknown shape id: ${shape.id}`);
-      break;
-    }
-  }
-  return points;
-};
+    });
+  });
 
-export const downloadFile = (content, filename, type) => {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  return nearest;
 };
