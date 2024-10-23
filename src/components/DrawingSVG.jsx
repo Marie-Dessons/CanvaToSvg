@@ -37,36 +37,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
   const [initialRotation, setInitialRotation] = useState(0);
   const [initialScale, setInitialScale] = useState({ x: 1, y: 1 });
   const [isEditMode, setIsEditMode] = useState(false);
-
-  useEffect(() => {
-    redrawCanvas();
-  }, [paths, currentPath, selectedPathIndex, showPreview]);
-
-  const redrawCanvas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#000';
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    // Draw saved paths
-    paths.forEach((path, index) => {
-      drawPath(ctx, path);
-      if (index === selectedPathIndex) {
-        drawSelectionBox(ctx, path);
-        if (showPreview) drawPreview(ctx, path);
-      }
-    });
-
-    // Draw current path
-    if (currentPath.length > 0) {
-      drawPath(ctx, currentPath);
-      if (showPreview) drawPreview(ctx, currentPath);
-    }
-  };
+  const [selectedColor, setSelectedColor] = useState('black');
 
   const getResizeHandle = (path, pos) => {
     const bounds = getPathBounds(path);
@@ -110,9 +81,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
     }
 
     if (isEditMode || !isDrawingMode) {
-      const clickedPathIndex = paths.findIndex(path => 
-        isPointInPath(canvasRef.current, path, pos)
-      );
+      const clickedPathIndex = paths.findIndex(path => isPointInPath(canvasRef.current, path, pos));
       if (clickedPathIndex !== -1) {
         setSelectedPathIndex(clickedPathIndex);
         setIsMoving(true);
@@ -130,7 +99,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
     if (isDrawingMode) {
       setIsDrawing(true);
       setStartPoint(pos);
-      setCurrentPath([{ ...pos, width: strokeWidth, fill: fillEnabled }]);
+      setCurrentPath([{ ...pos, width: strokeWidth, fill: fillEnabled, color: selectedColor }]);
     }
   };
 
@@ -166,18 +135,16 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             scaleY = (bounds.maxY + dy - bounds.minY) / (bounds.maxY - bounds.minY);
             break;
           case 'bl':
-            scaleX = (bounds.maxX - pos.x) / (bounds.maxX - bounds.minX);
+            scaleX = (bounds.maxX - (pos.x)) / (bounds.maxX - bounds.minX);
             scaleY = (bounds.maxY + dy - bounds.minY) / (bounds.maxY - bounds.minY);
             break;
           case 'tr':
             scaleX = (bounds.maxX + dx - bounds.minX) / (bounds.maxX - bounds.minX);
-            scaleY = (bounds.maxY - pos.y) / (bounds.maxY - bounds.minY);
+            scaleY = (bounds.maxY - (pos.y)) / (bounds.maxY - bounds.minY);
             break;
           case 'tl':
-            scaleX = (bounds.maxX - pos.x) / (bounds.maxX - bounds.minX);
-            scaleY = (bounds.maxY - pos.y) / (bounds.maxY - bounds.minY);
-            break;
-          default:
+            scaleX = (bounds.maxX - (pos.x)) / (bounds.maxX - bounds.minX);
+            scaleY = (bounds.maxY - (pos.y)) / (bounds.maxY - bounds.minY);
             break;
         }
       }
@@ -215,9 +182,9 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
     if (!isDrawing) return;
 
     if (isDrawingMode) {
-      setCurrentPath((prev) => [...prev, { ...pos, width: strokeWidth, fill: fillEnabled }]);
+      setCurrentPath((prev) => [...prev, { ...pos, width: strokeWidth, fill: fillEnabled, color: selectedColor }]);
     } else if (selectedShape && startPoint) {
-      const shapePoints = createShape(startPoint, pos, selectedShape, strokeWidth, fillEnabled);
+      const shapePoints = createShape(startPoint, pos, selectedShape, strokeWidth, fillEnabled, selectedColor);
       setCurrentPath(shapePoints);
     }
   };
@@ -241,44 +208,49 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
   };
 
   const startRotating = () => {
-    if (selectedPathIndex === null) return;
-    setIsRotating(true);
-    setInitialRotation(0);
+    if (selectedPathIndex !== null) {
+      setIsRotating(true);
+      setInitialRotation(0);
+    }
   };
 
   const flipHorizontally = () => {
-    if (selectedPathIndex === null) return;
-    const path = paths[selectedPathIndex];
-    const bounds = getPathBounds(path);
-    const centerX = (bounds.minX + bounds.maxX) / 2;
-    
-    const updatedPaths = [...paths];
-    updatedPaths[selectedPathIndex] = getFlippedPath(path, 'horizontal', { x: centerX, y: 0 });
-    setPaths(updatedPaths);
+    if (selectedPathIndex !== null) {
+      const path = paths[selectedPathIndex];
+      const bounds = getPathBounds(path);
+      const centerX = (bounds.minX + bounds.maxX) / 2;
+      
+      const updatedPaths = [...paths];
+      updatedPaths[selectedPathIndex] = getFlippedPath(path, 'horizontal', { x: centerX, y: 0 });
+      setPaths(updatedPaths);
+    }
   };
 
   const flipVertically = () => {
-    if (selectedPathIndex === null) return;
-    const path = paths[selectedPathIndex];
-    const bounds = getPathBounds(path);
-    const centerY = (bounds.minY + bounds.maxY) / 2;
-    
-    const updatedPaths = [...paths];
-    updatedPaths[selectedPathIndex] = getFlippedPath(path, 'vertical', { x: 0, y: centerY });
-    setPaths(updatedPaths);
+    if (selectedPathIndex !== null) {
+      const path = paths[selectedPathIndex];
+      const bounds = getPathBounds(path);
+      const centerY = (bounds.minY + bounds.maxY) / 2;
+      
+      const updatedPaths = [...paths];
+      updatedPaths[selectedPathIndex] = getFlippedPath(path, 'vertical', { x: 0, y: centerY });
+      setPaths(updatedPaths);
+    }
   };
 
   const clearCanvas = () => {
     setPaths([]);
     setCurrentPath([]);
     setSelectedPathIndex(null);
+    setSvgString("");
   };
 
   const deletePath = () => {
-    if (selectedPathIndex === null) return;
-    const updatedPaths = paths.filter((_, index) => index !== selectedPathIndex);
-    setPaths(updatedPaths);
-    setSelectedPathIndex(null);
+    if (selectedPathIndex !== null) {
+      const newPaths = paths.filter((_, index) => index !== selectedPathIndex);
+      setPaths(newPaths);
+      setSelectedPathIndex(null);
+    }
   };
 
   const generateSVG = () => {
@@ -288,10 +260,11 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
           ? `M ${point.x} ${point.y}`
           : `${acc} L ${point.x} ${point.y}`;
       }, "");
+      const color = path[0].color || 'black';
       return `<path 
         d="${d}" 
-        fill="${path[0].fill ? 'black' : 'none'}" 
-        stroke="black" 
+        fill="${path[0].fill ? color : 'none'}" 
+        stroke="${color}" 
         stroke-width="${path[0].width}"
         stroke-linecap="round"
         stroke-linejoin="round"
@@ -313,6 +286,41 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
     downloadFile(svgContent, 'drawing.svg', 'image/svg+xml');
   };
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return;
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = selectedColor;
+
+    const redraw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      paths.forEach((path, index) => {
+        ctx.strokeStyle = path[0].color || 'black';
+        drawPath(ctx, path);
+        if (index === selectedPathIndex) {
+          drawSelectionBox(ctx, path);
+          if (showPreview) {
+            drawPreview(ctx, path);
+          }
+        }
+      });
+
+      if (currentPath.length > 0) {
+        ctx.strokeStyle = selectedColor;
+        drawPath(ctx, currentPath);
+        if (showPreview) {
+          drawPreview(ctx, currentPath);
+        }
+      }
+    };
+
+    redraw();
+  }, [paths, currentPath, selectedPathIndex, showPreview, selectedColor]);
+
   return (
     <div className={`grid grid-cols-1 md:grid-cols-4 gap-6 ${className}`}>
       <div className="md:col-span-3">
@@ -325,7 +333,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
                   ? 'bg-blue-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
-              {isEditMode ? 'Quitter mode édition' : 'Mode édition'}
+              {isEditMode ? 'Exit Edit Mode' : 'Edit Mode'}
             </button>
             {selectedPathIndex !== null && isEditMode && (
               <>
@@ -333,7 +341,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
                   onClick={startRotating}
                   className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
                 >
-                  Rotation
+                  Rotate
                 </button>
                 <button
                   onClick={flipHorizontally}
@@ -374,7 +382,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Télécharger SVG
+            Download SVG
           </button>
           
           <button
@@ -384,7 +392,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Tout effacer
+            Clear All
           </button>
           
           <button
@@ -398,7 +406,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Supprimer l'élement
+            Delete Selection
           </button>
         </div>
       </div>
@@ -415,6 +423,8 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
           onFillChange={setFillEnabled}
           showPreview={showPreview}
           onPreviewChange={setShowPreview}
+          selectedColor={selectedColor}
+          onColorChange={setSelectedColor}
         />
       </div>
 

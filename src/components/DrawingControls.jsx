@@ -1,6 +1,6 @@
 import React from 'react';
 
-const STROKE_WIDTHS = [2, 4, 6, 8, 10];
+const STROKE_WIDTHS = [2, 4, 6, 8, 10]; // Change l'épaisseur du trait
 const SHAPES = [
   { id: 'circle', label: 'Cercle', path: 'M 12 22 C 17.5228 22 22 17.5228 22 12 C 22 6.47715 17.5228 2 12 2 C 6.47715 2 2 6.47715 2 12 C 2 17.5228 6.47715 22 12 22 Z' },
   { id: 'square', label: 'Carré', path: 'M3 3h18v18H3z' },
@@ -8,20 +8,55 @@ const SHAPES = [
   { id: 'triangle', label: 'Triangle', path: 'M12 2L22 22H2L12 2z' },
 ];
 
+const colors = [
+  { name: 'black', class: 'bg-black' },
+  { name: 'gray', class: 'bg-gray-500' },
+  { name: 'red', class: 'bg-red-500' },
+  { name: 'orange', class: 'bg-orange-500' },
+  { name: 'yellow', class: 'bg-yellow-500' },
+  { name: 'green', class: 'bg-green-500' },
+  { name: 'blue', class: 'bg-blue-500' },
+  { name: 'indigo', class: 'bg-indigo-500' },
+  { name: 'purple', class: 'bg-purple-500' },
+  { name: 'pink', class: 'bg-pink-500' },
+];
+
+
+
 const DrawingControls = ({ 
-  strokeWidth, 
-  onStrokeWidthChange,
-  onShapeSelect,
-  selectedShape,
-  isDrawingMode,
-  onDrawingModeChange,
-  fillEnabled,
-  onFillChange,
-  showPreview,
-  onPreviewChange
+  strokeWidth,  // Épaisseur du trait
+  onStrokeWidthChange, // Change l'épaisseur du trait
+  onShapeSelect, // Change la forme
+  selectedShape, // Forme sélectionnée
+  isDrawingMode, // Mode de dessin
+  onDrawingModeChange, // Change le mode de dessin
+  fillEnabled, // Remplir les formes
+  onFillChange, // Change le remplissage des formes
+  showPreview, // Aperçu des dimensions
+  onPreviewChange, // Change l'aperçu des dimensions
+  selectedColor, // Couleur sélectionnée
+  onColorChange, // Change la couleur
 }) => {
   return (
     <div className="flex flex-col gap-6 p-4 bg-white rounded-xl shadow-lg">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Couleurs</h3>
+        <div className="grid grid-cols-5 gap-2">
+          {colors.map(color => (
+            <button
+              key={color.name}
+              onClick={() => onColorChange(color.name)}
+              className={`w-8 h-8 rounded-lg ${color.class} transition-all ${
+                selectedColor === color.name 
+                  ? 'ring-2 ring-offset-2 ring-blue-500' 
+                  : 'hover:ring-2 hover:ring-offset-2 hover:ring-blue-200'
+              }`}
+              title={color.name}
+            />
+          ))}
+        </div>
+      </div>
+
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-2">Épaisseur du trait</h3>
         <div className="flex gap-2">
@@ -35,8 +70,8 @@ const DrawingControls = ({
                   : 'border-gray-200 hover:border-blue-200'}`}
             >
               <div 
-                className="bg-gray-800 rounded-full"
-                style={{ width: width, height: width }}
+                className={selectedColor === 'black' ? 'bg-black' : `bg-${selectedColor}-500`}
+                style={{ width: width, height: width, borderRadius: '50%' }}
               />
             </button>
           ))}
@@ -106,7 +141,7 @@ const DrawingControls = ({
               >
                 <svg 
                   viewBox="0 0 24 24" 
-                  className="w-full h-8"
+                  className={`w-full h-8 ${selectedColor === 'black' ? 'text-black' : `text-${selectedColor}-500`}`}
                   fill={fillEnabled ? "currentColor" : "none"}
                   stroke="currentColor"
                   strokeWidth="2"

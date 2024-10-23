@@ -24,7 +24,7 @@ export const drawPath = (ctx, path) => {
   });
   
   if (path[0].fill) {
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = path[0].color || '#000';
     ctx.fill();
   }
   
@@ -118,8 +118,7 @@ export const getPathBounds = (path) => {
 
 export const isPointInPath = (canvas, path, point) => {
   const ctx = canvas.getContext('2d');
-  const bounds = getPathBounds(path);
-  const padding = 5;
+  const bounds = getPathBounds(path);const padding = 5;
   
   // Check if point is within path bounds
   if (
@@ -191,7 +190,7 @@ export const getFlippedPath = (path, axis, origin) => {
   }));
 };
 
-export const createShape = (start, end, shape, strokeWidth, fillEnabled) => {
+export const createShape = (start, end, shape, strokeWidth, fillEnabled, color) => {
   const width = Math.abs(end.x - start.x);
   const height = Math.abs(end.y - start.y);
   const minX = Math.min(start.x, end.x);
@@ -209,7 +208,8 @@ export const createShape = (start, end, shape, strokeWidth, fillEnabled) => {
           x: centerX + radius * Math.cos(angle),
           y: centerY + radius * Math.sin(angle),
           width: strokeWidth,
-          fill: fillEnabled
+          fill: fillEnabled,
+          color
         });
       }
       break;
@@ -217,27 +217,27 @@ export const createShape = (start, end, shape, strokeWidth, fillEnabled) => {
     case 'square': {
       const size = Math.min(width, height);
       points.push(
-        { x: minX, y: minY, width: strokeWidth, fill: fillEnabled },
-        { x: minX + size, y: minY, width: strokeWidth, fill: fillEnabled },
-        { x: minX + size, y: minY + size, width: strokeWidth, fill: fillEnabled },
-        { x: minX, y: minY + size, width: strokeWidth, fill: fillEnabled },
-        { x: minX, y: minY, width: strokeWidth, fill: fillEnabled }
+        { x: minX, y: minY, width: strokeWidth, fill: fillEnabled, color },
+        { x: minX + size, y: minY, width: strokeWidth, fill: fillEnabled, color },
+        { x: minX + size, y: minY + size, width: strokeWidth, fill: fillEnabled, color },
+        { x: minX, y: minY + size, width: strokeWidth, fill: fillEnabled, color },
+        { x: minX, y: minY, width: strokeWidth, fill: fillEnabled, color }
       );
       break;
     }
     case 'line': {
       points.push(
-        { x: start.x, y: start.y, width: strokeWidth },
-        { x: end.x, y: end.y, width: strokeWidth }
+        { x: start.x, y: start.y, width: strokeWidth, color },
+        { x: end.x, y: end.y, width: strokeWidth, color }
       );
       break;
     }
     case 'triangle': {
       points.push(
-        { x: centerX, y: minY, width: strokeWidth, fill: fillEnabled },
-        { x: minX + width, y: minY + height, width: strokeWidth, fill: fillEnabled },
-        { x: minX, y: minY + height, width: strokeWidth, fill: fillEnabled },
-        { x: centerX, y: minY, width: strokeWidth, fill: fillEnabled }
+        { x: centerX, y: minY, width: strokeWidth, fill: fillEnabled, color },
+        { x: minX + width, y: minY + height, width: strokeWidth, fill: fillEnabled, color },
+        { x: minX, y: minY + height, width: strokeWidth, fill: fillEnabled, color },
+        { x: centerX, y: minY, width: strokeWidth, fill: fillEnabled, color }
       );
       break;
     }
