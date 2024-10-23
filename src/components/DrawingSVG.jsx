@@ -16,7 +16,7 @@ import {
   getPathBounds
 } from "../utils/drawingUtils";
 
-const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
+const DrawingSVG = ({ width = 512, height = 512, className = "" }) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
@@ -39,7 +39,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedColor, setSelectedColor] = useState('black');
 
-  const getResizeHandle = (path, pos) => {
+  const getResizeHandle = (path, pos) => { // Taille redimensionnable
     const bounds = getPathBounds(path);
     const handleSize = 8;
     const handles = [
@@ -59,7 +59,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
     );
   };
 
-  const startDrawing = (e) => {
+  const startDrawing = (e) => { 
     const pos = getMousePos(canvasRef.current, e);
     setInitialMousePos(pos);
 
@@ -104,10 +104,10 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
   };
 
   const draw = (e) => {
-    const pos = getMousePos(canvasRef.current, e);
+    const pos = getMousePos(canvasRef.current, e); // Position de la souris
 
-    if (isMoving && selectedPathIndex !== null) {
-      const dx = pos.x - initialMousePos.x;
+    if (isMoving && selectedPathIndex !== null) { // Si on bouge et que l'index est différent de null
+      const dx = pos.x - initialMousePos.x; // dx = position.x - position initiale.x
       const dy = pos.y - initialMousePos.y;
       const updatedPaths = [...paths];
       updatedPaths[selectedPathIndex] = getTranslatedPath(paths[selectedPathIndex], dx, dy);
@@ -116,7 +116,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
       return;
     }
 
-    if (isResizing && selectedPathIndex !== null) {
+    if (isResizing && selectedPathIndex !== null) { // Si on redimensionne et que l'index est différent de null
       const path = paths[selectedPathIndex];
       const bounds = getPathBounds(path);
       const centerX = (bounds.minX + bounds.maxX) / 2;
@@ -146,6 +146,9 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             scaleX = (bounds.maxX - (pos.x)) / (bounds.maxX - bounds.minX);
             scaleY = (bounds.maxY - (pos.y)) / (bounds.maxY - bounds.minY);
             break;
+          default:
+            console.warn(`Unexpected resize handle id: ${resizeHandle.id}`);
+            break;
         }
       }
       
@@ -160,7 +163,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
       return;
     }
 
-    if (isRotating && selectedPathIndex !== null) {
+    if (isRotating && selectedPathIndex !== null) { // Si on tourne et que l'index est différent de null
       const bounds = getPathBounds(paths[selectedPathIndex]);
       const centerX = (bounds.minX + bounds.maxX) / 2;
       const centerY = (bounds.minY + bounds.maxY) / 2;
@@ -181,8 +184,8 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
 
     if (!isDrawing) return;
 
-    if (isDrawingMode) {
-      setCurrentPath((prev) => [...prev, { ...pos, width: strokeWidth, fill: fillEnabled, color: selectedColor }]);
+    if (isDrawingMode) {  
+      setCurrentPath((prev) => [...prev, { ...pos, width: strokeWidth, fill: fillEnabled, color: selectedColor }]); 
     } else if (selectedShape && startPoint) {
       const shapePoints = createShape(startPoint, pos, selectedShape, strokeWidth, fillEnabled, selectedColor);
       setCurrentPath(shapePoints);
@@ -260,7 +263,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
           ? `M ${point.x} ${point.y}`
           : `${acc} L ${point.x} ${point.y}`;
       }, "");
-      const color = path[0].color || 'black';
+      const color = 'black';
       return `<path 
         d="${d}" 
         fill="${path[0].fill ? color : 'none'}" 
@@ -273,8 +276,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
 
     const svgContent = `
       <svg 
-        width="${width}" 
-        height="${height}" 
+        viewBox="0 0 ${width} ${height}" 
         xmlns="http://www.w3.org/2000/svg"
         style="stroke-linecap: round; stroke-linejoin: round;"
       >
@@ -333,7 +335,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
                   ? 'bg-blue-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
-              {isEditMode ? 'Exit Edit Mode' : 'Edit Mode'}
+              {isEditMode ? 'Quitter mode édition' : 'Mode édition'}
             </button>
             {selectedPathIndex !== null && isEditMode && (
               <>
@@ -341,7 +343,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
                   onClick={startRotating}
                   className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
                 >
-                  Rotate
+                  Rotation
                 </button>
                 <button
                   onClick={flipHorizontally}
@@ -382,7 +384,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download SVG
+            Télécharger SVG
           </button>
           
           <button
@@ -392,7 +394,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Clear All
+            Tout effacer
           </button>
           
           <button
@@ -406,7 +408,7 @@ const DrawingSVG = ({ width = 800, height = 800, className = "" }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Delete Selection
+            Supprimer l'élément
           </button>
         </div>
       </div>

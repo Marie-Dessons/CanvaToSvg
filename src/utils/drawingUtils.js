@@ -241,6 +241,10 @@ export const createShape = (start, end, shape, strokeWidth, fillEnabled, color) 
       );
       break;
     }
+    default: {
+      console.warn(`Unknown shape id: ${shape.id}`);
+      break;
+    }
   }
   return points;
 };
